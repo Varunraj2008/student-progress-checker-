@@ -9,7 +9,6 @@ export class AuthService {
   public loading = signal<boolean>(true);
   public readonly loginPortalKey = 'wellness-login-portal';
   private readonly localSessionKey = 'wellness-local-session';
-  private readonly knownAdminEmails = ['honestmanikandan2025@gmail.com'];
 
   constructor(private supabase: SupabaseService, private router: Router) { this.initializeAuth(); }
 
@@ -86,21 +85,20 @@ export class AuthService {
       this.currentRole.set(data.role);
       return;
     }
-    const role = this.knownAdminEmails.includes(user.email) ? 'admin' : 'student';
     const profilePayload = {
       id: user.id,
       email: user.email,
       name: user.user_metadata?.full_name || user.user_metadata?.name || user.email,
-      role
+      role: 'student'
     };
     const { data: newProfile, error: insertError } = await this.supabase.supabase.from('profiles').upsert(profilePayload, { onConflict: 'id' }).select().maybeSingle();
     if (insertError) {
-      this.currentUser.set({ id: user.id, email: user.email, name: user.email, role });
-      this.currentRole.set(role);
+      this.currentUser.set({ id: user.id, email: user.email, name: user.email, role: 'student' });
+      this.currentRole.set('student');
       return;
     }
     this.currentUser.set(newProfile || { ...profilePayload });
-    this.currentRole.set(newProfile?.role || role);
+    this.currentRole.set(newProfile?.role || 'student');
   }
 
   async signInWithEmailPassword(email: string, password: string) {

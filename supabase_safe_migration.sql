@@ -6,6 +6,7 @@ create table if not exists public.profiles (
   name text not null,
   register_number text unique,
   email text not null,
+  password text,
   role text not null check (role in ('student', 'admin')) default 'student',
   created_at timestamptz default now()
 );
