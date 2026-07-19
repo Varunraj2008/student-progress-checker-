@@ -13,6 +13,7 @@ export class AdminStudentComponent implements OnInit {
   route = inject(ActivatedRoute); router = inject(Router); auth = inject(AuthService); progress = inject(ProgressService);
   id = ''; analytics: any = null; days: any[] = []; range: 'today'|'week'|'month'|'all' = 'all';
   selected: any = null; sleepTarget = 7; loading = true; error = ''; updating = false;
+  proofUrls: Record<string, string|null> = { breakfast:null, lunch:null, dinner:null, walking:null, sleep:null };
   async ngOnInit() {
     this.id = this.route.snapshot.paramMap.get('id') || '';
     try {
@@ -20,6 +21,7 @@ export class AdminStudentComponent implements OnInit {
       this.analytics = analytics;
       this.days = days || [];
       this.selected = this.days[0] || null;
+      await this.loadProofPreviews();
     } catch (e: any) { this.error = e.message; }
     finally { this.loading = false; }
   }
@@ -39,6 +41,17 @@ export class AdminStudentComponent implements OnInit {
     const fromStr = from.toISOString().slice(0, 10);
     return this.days.filter(d => d.date >= fromStr).reverse();
   }
+  async onSelectionChange() { await this.loadProofPreviews(); }
+  async loadProofPreviews() {
+    if (!this.selected) return;
+    for (const key of ['breakfast', 'lunch', 'dinner', 'walking', 'sleep'] as const) {
+      const path = this.selected?.[`${key}_proof_path`] || null;
+      if (!path) { this.proofUrls[key] = null; continue; }
+      try { this.proofUrls[key] = await this.progress.signedUrl(path); } catch { this.proofUrls[key] = null; }
+    }
+  }
+  isVideoProof(path: string | null) { return this.progress.isVideoPath(path); }
+  isImageProof(path: string | null) { return this.progress.isImagePath(path); }
   async viewProof(path: string|null) {
     if (!path) return;
     try { window.open(await this.progress.signedUrl(path), '_blank'); } catch (e: any) { this.error = e.message; }

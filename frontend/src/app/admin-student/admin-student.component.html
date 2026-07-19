@@ -43,16 +43,39 @@
     </div>
     <div class="card panel">
       <h3>Proof review</h3>
-      <select class="day-select" [(ngModel)]="selected">
+      <select class="day-select" [(ngModel)]="selected" (ngModelChange)="onSelectionChange()">
         <option *ngFor="let d of days" [ngValue]="d">{{ d.date }} · {{ d.pct }}% · {{ d.admin_status }}</option>
       </select>
       <div *ngIf="selected">
         <ul class="facts">
-          <li>Breakfast: {{ selected.breakfast_completed?'Yes':'No' }} <button *ngIf="selected.breakfast_proof_path" class="link" (click)="viewProof(selected.breakfast_proof_path)">proof</button></li>
-          <li>Lunch: {{ selected.lunch_completed?'Yes':'No' }} <button *ngIf="selected.lunch_proof_path" class="link" (click)="viewProof(selected.lunch_proof_path)">proof</button></li>
-          <li>Dinner: {{ selected.dinner_completed?'Yes':'No' }} <button *ngIf="selected.dinner_proof_path" class="link" (click)="viewProof(selected.dinner_proof_path)">proof</button></li>
-          <li>Distance: {{ selected.distance_km }} km <button *ngIf="selected.walking_proof_path" class="link" (click)="viewProof(selected.walking_proof_path)">proof</button></li>
-          <li>Sleep: {{ selected.sleep_hours }} h <button *ngIf="selected.sleep_proof_path" class="link" (click)="viewProof(selected.sleep_proof_path)">proof</button></li>
+          <li>Breakfast: {{ selected.breakfast_completed?'Yes':'No' }} <button *ngIf="selected.breakfast_proof_path" class="link" (click)="viewProof(selected.breakfast_proof_path)">proof</button>
+            <div class="preview-box" *ngIf="proofUrls['breakfast']">
+              <video *ngIf="isVideoProof(selected.breakfast_proof_path)" [src]="proofUrls['breakfast']" controls preload="metadata"></video>
+              <img *ngIf="isImageProof(selected.breakfast_proof_path)" [src]="proofUrls['breakfast']" alt="Breakfast proof">
+            </div>
+          </li>
+          <li>Lunch: {{ selected.lunch_completed?'Yes':'No' }} <button *ngIf="selected.lunch_proof_path" class="link" (click)="viewProof(selected.lunch_proof_path)">proof</button>
+            <div class="preview-box" *ngIf="proofUrls['lunch']">
+              <video *ngIf="isVideoProof(selected.lunch_proof_path)" [src]="proofUrls['lunch']" controls preload="metadata"></video>
+              <img *ngIf="isImageProof(selected.lunch_proof_path)" [src]="proofUrls['lunch']" alt="Lunch proof">
+            </div>
+          </li>
+          <li>Dinner: {{ selected.dinner_completed?'Yes':'No' }} <button *ngIf="selected.dinner_proof_path" class="link" (click)="viewProof(selected.dinner_proof_path)">proof</button>
+            <div class="preview-box" *ngIf="proofUrls['dinner']">
+              <video *ngIf="isVideoProof(selected.dinner_proof_path)" [src]="proofUrls['dinner']" controls preload="metadata"></video>
+              <img *ngIf="isImageProof(selected.dinner_proof_path)" [src]="proofUrls['dinner']" alt="Dinner proof">
+            </div>
+          </li>
+          <li>Distance: {{ selected.distance_km }} km <button *ngIf="selected.walking_proof_path" class="link" (click)="viewProof(selected.walking_proof_path)">proof</button>
+            <div class="preview-box" *ngIf="proofUrls['walking']">
+              <img *ngIf="isImageProof(selected.walking_proof_path)" [src]="proofUrls['walking']" alt="Walking proof">
+            </div>
+          </li>
+          <li>Sleep: {{ selected.sleep_hours }} h <button *ngIf="selected.sleep_proof_path" class="link" (click)="viewProof(selected.sleep_proof_path)">proof</button>
+            <div class="preview-box" *ngIf="proofUrls['sleep']">
+              <img *ngIf="isImageProof(selected.sleep_proof_path)" [src]="proofUrls['sleep']" alt="Sleep proof">
+            </div>
+          </li>
         </ul>
         <div class="actions" *ngIf="selected.admin_status !== 'verified'">
           <button class="btn-ok" [disabled]="updating" (click)="setStatus('verified')">Approve</button>

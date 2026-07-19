@@ -29,24 +29,34 @@
       <div class="activity-section" *ngFor="let m of ['breakfast','lunch','dinner']">
         <label class="checkbox-label"><input type="checkbox" [formControlName]="m"> {{ m | titlecase }} — Ate today</label>
         <div class="proof-upload" *ngIf="form.get(m)?.value">
-          <label>Proof {{ existing[m] ? '(uploaded)' : '(required)' }}</label>
-          <input type="file" accept="image/*" (change)="onFile($event, m)">
+          <label>Video proof {{ existing[m] ? '(uploaded)' : '(required)' }} · max 25MB</label>
+          <input type="file" [accept]="progress.getProofAccept(m)" (change)="onFile($event, m)">
+          <div class="preview-box" *ngIf="previewUrls[m]">
+            <video *ngIf="previewTypes[m] === 'video'" [src]="previewUrls[m]" controls preload="metadata"></video>
+            <img *ngIf="previewTypes[m] === 'image'" [src]="previewUrls[m]" alt="Proof preview">
+          </div>
         </div>
       </div>
       <div class="activity-section">
         <label>Distance (km)</label>
         <input type="number" formControlName="distance" class="input-field" min="0" step="0.1">
         <div class="proof-upload" *ngIf="(form.value.distance||0)>0">
-          <label>Fitness screenshot {{ existing['walking'] ? '(uploaded)' : '(required)' }}</label>
-          <input type="file" accept="image/*" (change)="onFile($event,'walking')">
+          <label>Fitness screenshot {{ existing['walking'] ? '(uploaded)' : '(required)' }} · max 25MB</label>
+          <input type="file" [accept]="progress.getProofAccept('walking')" (change)="onFile($event,'walking')">
+          <div class="preview-box" *ngIf="previewUrls['walking']">
+            <img [src]="previewUrls['walking']" alt="Walking proof preview">
+          </div>
         </div>
       </div>
       <div class="activity-section">
         <label>Sleep (hours)</label>
         <input type="number" formControlName="sleep" class="input-field" min="0" max="24" step="0.5">
         <div class="proof-upload" *ngIf="(form.value.sleep||0)>0">
-          <label>Sleep screenshot {{ existing['sleep'] ? '(uploaded)' : '(required)' }}</label>
-          <input type="file" accept="image/*" (change)="onFile($event,'sleep')">
+          <label>Sleep screenshot {{ existing['sleep'] ? '(uploaded)' : '(required)' }} · max 25MB</label>
+          <input type="file" [accept]="progress.getProofAccept('sleep')" (change)="onFile($event,'sleep')">
+          <div class="preview-box" *ngIf="previewUrls['sleep']">
+            <img [src]="previewUrls['sleep']" alt="Sleep proof preview">
+          </div>
         </div>
       </div>
       <button type="submit" class="btn-primary" [disabled]="submitting">{{ submitting ? 'Saving…' : 'Submit today’s progress' }}</button>

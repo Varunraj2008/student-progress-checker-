@@ -54,12 +54,7 @@ export class LoginComponent {
     this.loading = true; this.errorMessage = '';
     const { email, password } = this.loginForm.value;
     try {
-      const { data, error } = await this.supabase.supabase.auth.signInWithPassword({
-        email: email as string, password: password as string
-      });
-      if (error) throw error;
-      if (!data.user) return;
-      await this.authService.loadProfile(data.user);
+      const data = await this.authService.signInWithEmailPassword(email as string, password as string);
       const role = this.authService.currentRole();
       if (this.isAdminView && role !== 'admin') {
         await this.authService.signOut();
@@ -71,6 +66,7 @@ export class LoginComponent {
         this.errorMessage = 'Admin accounts must use Admin Login.';
         return;
       }
+      if (!data?.user) return;
       this.router.navigate(this.isAdminView ? ['/admin'] : ['/student']);
     } catch (e: any) { this.errorMessage = e.message; }
     finally { this.loading = false; }

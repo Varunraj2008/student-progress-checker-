@@ -4,6 +4,9 @@ import { SupabaseService } from './supabase.service';
 @Injectable({ providedIn: 'root' })
 export class ProgressService {
   private sb = inject(SupabaseService).supabase;
+  readonly maxProofSizeBytes = 25 * 1024 * 1024;
+  readonly allowedVideoTypes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo', 'video/ogg'];
+  readonly allowedImageTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp', 'image/gif'];
   todayLocal() {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -45,7 +48,32 @@ export class ProgressService {
       if (error) throw error;
     }
   }
+  getProofAccept(type: string) {
+    return ['breakfast', 'lunch', 'dinner'].includes(type) ? 'video/*' : 'image/*';
+  }
+  validateProofFile(file: File, type: string) {
+    const isMeal = ['breakfast', 'lunch', 'dinner'].includes(type);
+    const allowedTypes = isMeal ? this.allowedVideoTypes : this.allowedImageTypes;
+    const ext = (file.name.split('.').pop() || '').toLowerCase();
+    const allowedExtensions = isMeal ? ['mp4', 'webm', 'mov', 'm4v', 'avi', 'mkv', 'ogg', 'ogv'] : ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+    const mimeOk = allowedTypes.includes((file.type || '').toLowerCase()) || allowedExtensions.includes(ext);
+    if (!mimeOk) return `${isMeal ? 'Meal' : 'Proof'} must be ${isMeal ? 'a video' : 'an image'} file.`;
+    if (file.size > this.maxProofSizeBytes) return `${isMeal ? 'Meal' : 'Proof'} must be 25MB or smaller.`;
+    return null;
+  }
+  isVideoPath(path: string | null) {
+    if (!path) return false;
+    const ext = (path.split('.').pop() || '').toLowerCase();
+    return ['mp4', 'webm', 'mov', 'm4v', 'avi', 'mkv', 'ogg', 'ogv'].includes(ext);
+  }
+  isImagePath(path: string | null) {
+    if (!path) return false;
+    const ext = (path.split('.').pop() || '').toLowerCase();
+    return ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext);
+  }
   async uploadProof(file: File, userId: string, dateStr: string, type: string) {
+    const validationError = this.validateProofFile(file, type);
+    if (validationError) throw new Error(validationError);
     const path = `${userId}/${dateStr}/${type}.${file.name.split('.').pop()}`;
     const { data, error } = await this.sb.storage.from('proofs').upload(path, file, { upsert: true });
     if (error) throw error; return data.path;

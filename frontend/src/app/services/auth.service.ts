@@ -7,8 +7,37 @@ export class AuthService {
   public currentUser = signal<any>(null);
   public currentRole = signal<string | null>(null);
   public loading = signal<boolean>(true);
+  private readonly localSessionKey = 'wellness-local-session';
+  private readonly localStudentEmail = 'varunrajvk.it25@bitsathy.ac.in';
+  private readonly localStudentPassword = '123456';
+
   constructor(private supabase: SupabaseService, private router: Router) { this.initializeAuth(); }
+
+  private persistLocalSession(user: any, role: string) {
+    const payload = { user, role };
+    localStorage.setItem(this.localSessionKey, JSON.stringify(payload));
+    this.currentUser.set(user);
+    this.currentRole.set(role);
+  }
+
+  private clearLocalSession() {
+    localStorage.removeItem(this.localSessionKey);
+    this.currentUser.set(null);
+    this.currentRole.set(null);
+  }
+
   async initializeAuth() {
+    const saved = localStorage.getItem(this.localSessionKey);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        this.currentUser.set(parsed.user);
+        this.currentRole.set(parsed.role);
+      } catch {
+        this.clearLocalSession();
+      }
+    }
+
     this.supabase.supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
         if (session) {
@@ -21,9 +50,11 @@ export class AuthService {
           }
         } else this.loading.set(false);
       } else if (event === 'SIGNED_OUT') {
-        this.currentUser.set(null); this.currentRole.set(null); this.loading.set(false);
+        this.clearLocalSession(); this.loading.set(false);
       }
     });
+
+    this.loading.set(false);
   }
   async loadProfile(user: any) {
     const { data, error } = await this.supabase.supabase.from('profiles').select('*').eq('id', user.id).single();
@@ -39,5 +70,24 @@ export class AuthService {
     }
     this.currentUser.set(data); this.currentRole.set(data.role);
   }
-  async signOut() { await this.supabase.supabase.auth.signOut(); }
+
+  async signInWithEmailPassword(email: string, password: string) {
+    if (email === this.localStudentEmail && password === this.localStudentPassword) {
+      const user = { id: 'local-student', email, name: 'Varunraj VK', role: 'student' };
+      this.persistLocalSession(user, 'student');
+      return { user };
+    }
+    const { data, error } = await this.supabase.supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    if (data.user) {
+      await this.loadProfile(data.user);
+      this.persistLocalSession(this.currentUser(), this.currentRole() || 'student');
+    }
+    return data;
+  }
+
+  async signOut() {
+    this.clearLocalSession();
+    await this.supabase.supabase.auth.signOut();
+  }
 }
