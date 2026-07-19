@@ -7,9 +7,9 @@ export class AuthService {
   public currentUser = signal<any>(null);
   public currentRole = signal<string | null>(null);
   public loading = signal<boolean>(true);
+  public readonly loginPortalKey = 'wellness-login-portal';
   private readonly localSessionKey = 'wellness-local-session';
-  private readonly localAdminEmail = 'honestmanikandan2025@gmail.com';
-  private readonly localAdminPassword = '123456';
+  private readonly knownAdminEmails = ['honestmanikandan2025@gmail.com'];
 
   constructor(private supabase: SupabaseService, private router: Router) { this.initializeAuth(); }
 
@@ -24,6 +24,15 @@ export class AuthService {
     localStorage.removeItem(this.localSessionKey);
     this.currentUser.set(null);
     this.currentRole.set(null);
+  }
+
+  private getLoginPortal(): 'student' | 'admin' | null {
+    const portal = sessionStorage.getItem(this.loginPortalKey);
+    return portal === 'student' || portal === 'admin' ? portal : null;
+  }
+
+  private clearLoginPortal() {
+    sessionStorage.removeItem(this.loginPortalKey);
   }
 
   async initializeAuth() {
@@ -42,12 +51,25 @@ export class AuthService {
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
         if (session) {
           await this.loadProfile(session.user);
-          this.loading.set(false);
-          const role = this.currentRole(), url = this.router.url;
-          if (url === '/' || url === '/login' || url === '/admin-login') {
-            if (role === 'admin' && url !== '/login') this.router.navigate(['/admin']);
-            else if (role === 'student' && url !== '/admin-login') this.router.navigate(['/student']);
+          const portal = this.getLoginPortal();
+          if (portal) {
+            this.clearLoginPortal();
+            if (portal === 'admin' && this.currentRole() === 'admin') {
+              this.router.navigate(['/admin']);
+            } else if (portal === 'student' && this.currentRole() === 'student') {
+              this.router.navigate(['/student']);
+            } else {
+              await this.signOut();
+              this.router.navigate([portal === 'admin' ? '/admin-login' : '/login']);
+            }
+          } else {
+            const role = this.currentRole(), url = this.router.url;
+            if (url === '/' || url === '/login' || url === '/admin-login') {
+              if (role === 'admin' && url !== '/login') this.router.navigate(['/admin']);
+              else if (role === 'student' && url !== '/admin-login') this.router.navigate(['/student']);
+            }
           }
+          this.loading.set(false);
         } else this.loading.set(false);
       } else if (event === 'SIGNED_OUT') {
         this.clearLocalSession(); this.loading.set(false);
@@ -57,26 +79,31 @@ export class AuthService {
     this.loading.set(false);
   }
   async loadProfile(user: any) {
-    const { data, error } = await this.supabase.supabase.from('profiles').select('*').eq('id', user.id).single();
-    if (error) {
-      const { data: newProfile, error: insertError } = await this.supabase.supabase.from('profiles').upsert({
-        id: user.id, email: user.email, name: user.user_metadata?.full_name || user.user_metadata?.name || user.email, role: 'student'
-      }, { onConflict: 'id' }).select().single();
-      if (insertError) {
-        this.currentUser.set({ id: user.id, email: user.email, name: user.email, role: 'student' });
-        this.currentRole.set('student'); return;
-      }
-      this.currentUser.set(newProfile); this.currentRole.set(newProfile?.role || 'student'); return;
+    const { data, error } = await this.supabase.supabase.from('profiles').select('*').eq('id', user.id).maybeSingle();
+    if (error) throw error;
+    if (data) {
+      this.currentUser.set(data);
+      this.currentRole.set(data.role);
+      return;
     }
-    this.currentUser.set(data); this.currentRole.set(data.role);
+    const role = this.knownAdminEmails.includes(user.email) ? 'admin' : 'student';
+    const profilePayload = {
+      id: user.id,
+      email: user.email,
+      name: user.user_metadata?.full_name || user.user_metadata?.name || user.email,
+      role
+    };
+    const { data: newProfile, error: insertError } = await this.supabase.supabase.from('profiles').upsert(profilePayload, { onConflict: 'id' }).select().maybeSingle();
+    if (insertError) {
+      this.currentUser.set({ id: user.id, email: user.email, name: user.email, role });
+      this.currentRole.set(role);
+      return;
+    }
+    this.currentUser.set(newProfile || { ...profilePayload });
+    this.currentRole.set(newProfile?.role || role);
   }
 
   async signInWithEmailPassword(email: string, password: string) {
-    if (email === this.localAdminEmail && password === this.localAdminPassword) {
-      const user = { id: 'local-admin', email, name: 'Honest Manikandan', role: 'admin' };
-      this.persistLocalSession(user, 'admin');
-      return { user };
-    }
     const { data, error } = await this.supabase.supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
     if (data.user) {

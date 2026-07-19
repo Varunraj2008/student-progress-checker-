@@ -22,17 +22,17 @@ export class AdminLoginComponent implements OnInit {
     if (session?.user) {
       await this.auth.loadProfile(session.user);
       if (this.auth.currentRole() === 'admin') this.router.navigate(['/admin']);
-      else if (sessionStorage.getItem('loginPortal') === 'admin') {
+      else if (sessionStorage.getItem(this.auth.loginPortalKey) === 'admin') {
         await this.auth.signOut();
         this.errorMessage = 'Not an admin account. Ask staff to set wants_admin_access / role.';
-        sessionStorage.removeItem('loginPortal');
+        sessionStorage.removeItem(this.auth.loginPortalKey);
       }
     }
   }
 
   async signInWithGoogle() {
     try {
-      sessionStorage.setItem('loginPortal', 'admin');
+      sessionStorage.setItem(this.auth.loginPortalKey, 'admin');
       const { error } = await this.supabase.supabase.auth.signInWithOAuth({
         provider: 'google',
         options: { redirectTo: `${window.location.origin}/admin-login` }
