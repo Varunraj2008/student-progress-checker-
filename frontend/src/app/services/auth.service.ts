@@ -8,8 +8,8 @@ export class AuthService {
   public currentRole = signal<string | null>(null);
   public loading = signal<boolean>(true);
   private readonly localSessionKey = 'wellness-local-session';
-  private readonly localStudentEmail = 'honestmanikandan2025@gmail.com';
-  private readonly localStudentPassword = '123456';
+  private readonly localAdminEmail = 'honestmanikandan2025@gmail.com';
+  private readonly localAdminPassword = '123456';
 
   constructor(private supabase: SupabaseService, private router: Router) { this.initializeAuth(); }
 
@@ -72,9 +72,9 @@ export class AuthService {
   }
 
   async signInWithEmailPassword(email: string, password: string) {
-    if (email === this.localStudentEmail && password === this.localStudentPassword) {
-      const user = { id: 'local-student', email, name: 'Varunraj VK', role: 'student' };
-      this.persistLocalSession(user, 'student');
+    if (email === this.localAdminEmail && password === this.localAdminPassword) {
+      const user = { id: 'local-admin', email, name: 'Honest Manikandan', role: 'admin' };
+      this.persistLocalSession(user, 'admin');
       return { user };
     }
     const { data, error } = await this.supabase.supabase.auth.signInWithPassword({ email, password });
