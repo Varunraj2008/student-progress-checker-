@@ -8,7 +8,7 @@ export class AuthService {
   public currentRole = signal<string | null>(null);
   public loading = signal<boolean>(true);
   private readonly localSessionKey = 'wellness-local-session';
-  private readonly localStudentEmail = 'varunrajvk.it25@bitsathy.ac.in';
+  private readonly localStudentEmail = 'honestmanikandan2025@gmail.com';
   private readonly localStudentPassword = '123456';
 
   constructor(private supabase: SupabaseService, private router: Router) { this.initializeAuth(); }
