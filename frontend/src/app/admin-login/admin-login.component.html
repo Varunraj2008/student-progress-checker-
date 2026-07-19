@@ -1,0 +1,21 @@
+<div class="login-container login-wide">
+  <div class="hero-panel card">
+    <p class="label">ADMIN CONSOLE</p>
+    <h2 class="title">Review proofs & student progress</h2>
+    <p class="subtitle left">Monitor submissions, sort by progress, open analytics, verify or request recheck.</p>
+    <ul class="bullets"><li>Dashboard totals</li><li>Search name / register</li><li>Today · Week · Month</li><li>Signed proof viewing</li></ul>
+  </div>
+  <div class="card login-card">
+    <h2 class="title">Admin Login</h2>
+    <p class="subtitle">Authorized staff only</p>
+    <div *ngIf="errorMessage" class="error-banner">{{ errorMessage }}</div>
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+      <div class="form-group"><label for="email">Email</label><input id="email" type="email" formControlName="email" class="input-field" placeholder="admin@college.edu"></div>
+      <div class="form-group"><label for="password">Password</label><input id="password" type="password" formControlName="password" class="input-field" placeholder="Password"></div>
+      <button type="submit" class="btn-primary" [disabled]="loginForm.invalid || loading">{{ loading ? 'Signing In...' : 'Admin Sign In' }}</button>
+      <div class="divider">or</div>
+      <button type="button" class="btn-google" (click)="signInWithGoogle()">Sign In with Google</button>
+    </form>
+    <p class="subtitle" style="margin-top:16px"><a routerLink="/login">← Student login</a></p>
+  </div>
+</div>

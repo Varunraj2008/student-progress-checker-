@@ -1,0 +1,57 @@
+import { Component, OnInit, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { AuthService } from '../services/auth.service';
+import { ProgressService } from '../services/progress.service';
+
+@Component({
+  selector: 'app-admin-student', standalone: true, imports: [CommonModule, FormsModule, RouterLink],
+  templateUrl: './admin-student.component.html', styleUrl: './admin-student.component.css'
+})
+export class AdminStudentComponent implements OnInit {
+  route = inject(ActivatedRoute); router = inject(Router); auth = inject(AuthService); progress = inject(ProgressService);
+  id = ''; analytics: any = null; days: any[] = []; range: 'today'|'week'|'month'|'all' = 'all';
+  selected: any = null; sleepTarget = 7; loading = true; error = ''; updating = false;
+  async ngOnInit() {
+    this.id = this.route.snapshot.paramMap.get('id') || '';
+    try {
+      const { analytics, days } = await this.progress.studentDetail(this.id);
+      this.analytics = analytics;
+      this.days = days || [];
+      this.selected = this.days[0] || null;
+    } catch (e: any) { this.error = e.message; }
+    finally { this.loading = false; }
+  }
+  get overall() {
+    if (!this.analytics) return 0;
+    if (this.range === 'today') return Number(this.analytics.today_progress)||0;
+    if (this.range === 'week') return Number(this.analytics.week_progress)||0;
+    if (this.range === 'month') return Number(this.analytics.month_progress)||0;
+    return this.days.length ? this.days.reduce((a, d) => a + d.pct, 0) / this.days.length : 0;
+  }
+  get chartDays() {
+    if (this.range === 'all') return [...this.days].reverse();
+    const today = this.progress.todayLocal();
+    if (this.range === 'today') return this.days.filter(d => d.date === today).reverse();
+    const from = new Date();
+    from.setDate(from.getDate() - (this.range === 'week' ? 6 : 29));
+    const fromStr = from.toISOString().slice(0, 10);
+    return this.days.filter(d => d.date >= fromStr).reverse();
+  }
+  async viewProof(path: string|null) {
+    if (!path) return;
+    try { window.open(await this.progress.signedUrl(path), '_blank'); } catch (e: any) { this.error = e.message; }
+  }
+  async setStatus(status: 'verified'|'recheck') {
+    if (!this.selected || this.selected.admin_status === 'verified') return;
+    this.updating = true;
+    try {
+      await this.progress.setAdminStatus(this.selected.id, status);
+      this.selected.admin_status = status;
+      const i = this.days.findIndex(d => d.id === this.selected.id); if (i >= 0) this.days[i].admin_status = status;
+    } catch (e: any) { this.error = e.message; }
+    finally { this.updating = false; }
+  }
+  async logout() { await this.auth.signOut(); this.router.navigate(['/login']); }
+}

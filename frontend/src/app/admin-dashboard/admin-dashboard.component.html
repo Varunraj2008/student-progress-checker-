@@ -1,0 +1,36 @@
+<div class="page">
+  <header class="header">
+    <div><p class="label">ADMIN CONSOLE</p><h2>Wellness overview</h2>
+      <p class="meta">Today’s health · Search students · Open proofs</p></div>
+    <button class="btn-primary logout-btn" (click)="logout()">Logout</button>
+  </header>
+  <div *ngIf="error" class="error-banner">{{ error }}</div>
+  <p *ngIf="loading">Loading…</p>
+  <div class="cards" *ngIf="!loading">
+    <div class="stat-card"><span>Total Students</span><strong>{{ stats['total_students']||0 }}</strong></div>
+    <div class="stat-card"><span>Submitted Today</span><strong>{{ stats['submitted_today']||0 }}</strong></div>
+    <div class="stat-card warn"><span>Not Submitted</span><strong>{{ stats['not_submitted_today']||0 }}</strong></div>
+    <div class="stat-card ok"><span>All Goals Done</span><strong>{{ stats['all_goals_today']||0 }}</strong></div>
+    <div class="stat-card bad"><span>Incomplete Goals</span><strong>{{ stats['incomplete_goals_today']||0 }}</strong></div>
+  </div>
+  <div class="card panel tip" *ngIf="!loading"><p><strong>Scoring:</strong> 5 goals × 20%. Incomplete Goals = Total Students − Submitted Today.</p></div>
+  <div class="card panel" *ngIf="!loading">
+    <h3>Students directory</h3>
+    <p class="meta" style="margin-bottom:12px">{{ filtered.length }} of {{ students.length }}</p>
+    <div class="filter-btns">
+      <button type="button" [class.active]="todayFilter==='completed'" (click)="setTodayFilter('completed')">Completed</button>
+      <button type="button" [class.active]="todayFilter==='pending'" (click)="setTodayFilter('pending')">Pending</button>
+      <button type="button" [class.active]="todayFilter==='all'" (click)="setTodayFilter('all')">All</button>
+    </div>
+    <div class="toolbar">
+      <input class="input-field" placeholder="Search name / register no." [(ngModel)]="search" (ngModelChange)="apply()">
+      <select [(ngModel)]="range" (ngModelChange)="apply()"><option value="today">Today</option><option value="week">1 Week</option><option value="month">1 Month</option></select>
+      <select [(ngModel)]="sortDir" (ngModelChange)="apply()"><option value="desc">Highest → Lowest</option><option value="asc">Lowest → Highest</option></select>
+    </div>
+    <div class="empty-box" *ngIf="!filtered.length"><h3>No students</h3><p class="empty">No matches for this filter.</p></div>
+    <div class="row" *ngFor="let s of filtered" (click)="open(s)">
+      <div><strong>{{ s.student_name }}</strong><span class="meta">{{ s.register_number||'—' }} · {{ s.email }} · {{ s.submitted_today ? 'Submitted today' : 'Not submitted today' }}</span></div>
+      <div class="right"><strong>{{ pct(s)|number:'1.0-0' }}%</strong><span class="badge">{{ progress.status(pct(s)) }}</span><span class="link">View →</span></div>
+    </div>
+  </div>
+</div>

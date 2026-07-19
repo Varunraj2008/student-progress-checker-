@@ -1,0 +1,66 @@
+<div class="page">
+  <header class="header">
+    <div><a routerLink="/admin">← All students</a><p class="label">INDIVIDUAL REVIEW</p>
+      <h2>{{ analytics?.student_name || 'Student' }}</h2>
+      <p class="meta">{{ analytics?.register_number || '—' }} · {{ analytics?.email }}</p></div>
+    <button class="btn-primary logout-btn" (click)="logout()">Logout</button>
+  </header>
+  <div *ngIf="error" class="error-banner">{{ error }}</div>
+  <p *ngIf="loading">Loading…</p>
+  <ng-container *ngIf="!loading && analytics">
+    <div class="tabs">
+      <button [class.active]="range==='today'" (click)="range='today'">Today</button>
+      <button [class.active]="range==='week'" (click)="range='week'">1 Week</button>
+      <button [class.active]="range==='month'" (click)="range='month'">1 Month</button>
+      <button [class.active]="range==='all'" (click)="range='all'">Full history</button>
+    </div>
+    <div class="cards">
+      <div class="stat-card"><span>Overall ({{ range }})</span><strong>{{ overall|number:'1.0-0' }}%</strong></div>
+      <div class="stat-card"><span>Status</span><strong class="sm">{{ progress.status(overall) }}</strong></div>
+      <div class="stat-card"><span>Meals</span><strong>{{ analytics.meal_completion_rate|number:'1.0-0' }}%</strong></div>
+      <div class="stat-card"><span>5 km</span><strong>{{ analytics.distance_target_rate|number:'1.0-0' }}%</strong></div>
+      <div class="stat-card"><span>Sleep</span><strong>{{ analytics.sleep_target_rate|number:'1.0-0' }}%</strong></div>
+      <div class="stat-card"><span>Consistency</span><strong>{{ analytics.submission_consistency|number:'1.0-0' }}%</strong></div>
+    </div>
+    <div class="card panel">
+      <h3>Progress trend</h3>
+      <p class="meta" style="margin-bottom:12px">{{ chartDays.length }} day(s) · calculated from Supabase daily_progress</p>
+      <div class="chart" *ngIf="chartDays.length; else noTrend">
+        <div class="bar-wrap" *ngFor="let d of chartDays">
+          <div class="bar" [style.height.%]="d.pct||2" [title]="d.date + ': ' + d.pct + '%'"></div>
+          <span>{{ d.date.slice(5) }}</span>
+        </div>
+      </div>
+      <ng-template #noTrend><p class="empty">No trend data for this range.</p></ng-template>
+    </div>
+    <div class="card panel">
+      <h3>All submissions (first → today)</h3>
+      <div class="hist" *ngFor="let d of days">
+        <strong>{{ d.date }}</strong>
+        <span>{{ d.pct }}% · {{ d.admin_status }}</span>
+      </div>
+      <p *ngIf="!days.length" class="empty">No submissions yet.</p>
+    </div>
+    <div class="card panel">
+      <h3>Proof review</h3>
+      <select class="day-select" [(ngModel)]="selected">
+        <option *ngFor="let d of days" [ngValue]="d">{{ d.date }} · {{ d.pct }}% · {{ d.admin_status }}</option>
+      </select>
+      <div *ngIf="selected">
+        <ul class="facts">
+          <li>Breakfast: {{ selected.breakfast_completed?'Yes':'No' }} <button *ngIf="selected.breakfast_proof_path" class="link" (click)="viewProof(selected.breakfast_proof_path)">proof</button></li>
+          <li>Lunch: {{ selected.lunch_completed?'Yes':'No' }} <button *ngIf="selected.lunch_proof_path" class="link" (click)="viewProof(selected.lunch_proof_path)">proof</button></li>
+          <li>Dinner: {{ selected.dinner_completed?'Yes':'No' }} <button *ngIf="selected.dinner_proof_path" class="link" (click)="viewProof(selected.dinner_proof_path)">proof</button></li>
+          <li>Distance: {{ selected.distance_km }} km <button *ngIf="selected.walking_proof_path" class="link" (click)="viewProof(selected.walking_proof_path)">proof</button></li>
+          <li>Sleep: {{ selected.sleep_hours }} h <button *ngIf="selected.sleep_proof_path" class="link" (click)="viewProof(selected.sleep_proof_path)">proof</button></li>
+        </ul>
+        <div class="actions" *ngIf="selected.admin_status !== 'verified'">
+          <button class="btn-ok" [disabled]="updating" (click)="setStatus('verified')">Approve</button>
+          <button class="btn-warn" [disabled]="updating" (click)="setStatus('recheck')">Recheck</button>
+        </div>
+        <p class="approved" *ngIf="selected.admin_status === 'verified'">Approved</p>
+      </div>
+      <p *ngIf="!selected" class="empty">No daily records.</p>
+    </div>
+  </ng-container>
+</div>

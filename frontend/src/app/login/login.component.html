@@ -1,0 +1,61 @@
+<div class="landing">
+  <nav class="nav">
+    <div class="brand">
+      <span class="logo">W</span>
+      <strong>Wellness Track</strong>
+    </div>
+    <div class="nav-links">
+      <a href="#goals">Goals</a>
+      <a href="#habits">Habits</a>
+    </div>
+  </nav>
+
+  <section class="hero" id="signin">
+    <p class="eyebrow">STUDENT DAILY WELLNESS</p>
+    <h1>Build healthier habits<br><span class="grad">one check-in at a time</span></h1>
+    <p class="lead">Track meals, movement, and sleep with proof uploads. Hit all five goals for a perfect 100% day — verified by your campus admin.</p>
+
+    <div class="login-card card">
+      <h2>{{ isAdminView ? 'Admin Login' : 'Student Login' }}</h2>
+      <p class="sub">{{ isAdminView ? 'Sign in to verify student progress' : 'Sign in to log today\'s wellness' }}</p>
+      <div *ngIf="errorMessage" class="error-banner">{{ errorMessage }}</div>
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input id="email" type="email" formControlName="email" class="input-field" placeholder="student@college.edu">
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input id="password" type="password" formControlName="password" class="input-field" placeholder="Your password">
+        </div>
+        <button type="submit" class="btn-primary" [disabled]="loginForm.invalid || loading">
+          {{ loading ? 'Signing In...' : 'Sign In' }}
+        </button>
+        <div class="divider">or</div>
+        <button type="button" class="btn-google" (click)="signInWithGoogle()">Sign In with Google</button>
+      </form>
+      <button type="button" class="btn-toggle-admin" (click)="toggleAdminView()">{{ isAdminView ? '← Back to Student Login' : 'Login as Admin' }}</button>
+    </div>
+
+    <p class="social-proof">Join students building better routines every day</p>
+  </section>
+
+  <section class="stats">
+    <div class="stat" *ngFor="let s of stats">
+      <strong>{{ s.value }}</strong>
+      <span>{{ s.label }}</span>
+    </div>
+  </section>
+
+  <section class="cards-sec" id="goals">
+    <p class="eyebrow">DAILY GOALS</p>
+    <h2 class="sec-title">Health & fitness flash cards</h2>
+    <div class="flash-grid" id="habits">
+      <article class="flash" *ngFor="let c of cards">
+        <span class="flash-tag">{{ c.tag }}</span>
+        <h3>{{ c.title }}</h3>
+        <p>{{ c.body }}</p>
+      </article>
+    </div>
+  </section>
+</div>
