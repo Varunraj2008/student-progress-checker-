@@ -5,11 +5,19 @@ create table if not exists public.profiles (
   id uuid references auth.users on delete cascade primary key,
   name text not null,
   register_number text unique,
-  email text not null,
+  email text not null unique,
   password text,
   role text not null check (role in ('student', 'admin')) default 'student',
   created_at timestamptz default now()
 );
+
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'profiles' AND indexname = 'profiles_email_lower_idx'
+  ) THEN
+    CREATE UNIQUE INDEX profiles_email_lower_idx ON public.profiles (lower(email));
+  END IF;
+END $$;
 
 -- RLS for profiles
 alter table public.profiles enable row level security;
@@ -45,8 +53,25 @@ END $$;
 create or replace function public.handle_new_user() 
 returns trigger as $$
 begin
+  update public.profiles
+  set id = new.id,
+      name = coalesce(new.raw_user_meta_data->>'name', coalesce(new.raw_user_meta_data->>'full_name', name)),
+      register_number = coalesce(new.raw_user_meta_data->>'register_number', register_number),
+      role = coalesce(role, coalesce(new.raw_user_meta_data->>'role', 'student'))
+  where lower(email) = lower(new.email);
+
+  if found then
+    return new;
+  end if;
+
   insert into public.profiles (id, email, name, register_number, role)
-  values (new.id, new.email, coalesce(new.raw_user_meta_data->>'name', coalesce(new.raw_user_meta_data->>'full_name', 'Student')), new.raw_user_meta_data->>'register_number', coalesce(new.raw_user_meta_data->>'role', 'student'));
+  values (
+    new.id,
+    new.email,
+    coalesce(new.raw_user_meta_data->>'name', coalesce(new.raw_user_meta_data->>'full_name', 'Student')),
+    new.raw_user_meta_data->>'register_number',
+    coalesce(new.raw_user_meta_data->>'role', 'student')
+  );
   return new;
 end;
 $$ language plpgsql security definer;

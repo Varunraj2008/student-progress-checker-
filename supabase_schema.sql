@@ -5,7 +5,7 @@ create table public.profiles (
   id uuid references auth.users on delete cascade primary key,
   name text not null,
   register_number text unique,
-  email text not null,
+  email text not null unique,
   password text,
   role text not null check (role in ('student', 'admin')) default 'student',
   created_at timestamptz default now()
@@ -33,8 +33,25 @@ create policy "Users can update own profile (except role)" on public.profiles
 create or replace function public.handle_new_user() 
 returns trigger as $$
 begin
+  update public.profiles
+  set id = new.id,
+      name = coalesce(new.raw_user_meta_data->>'name', coalesce(new.raw_user_meta_data->>'full_name', name)),
+      register_number = coalesce(new.raw_user_meta_data->>'register_number', register_number),
+      role = coalesce(role, coalesce(new.raw_user_meta_data->>'role', 'student'))
+  where lower(email) = lower(new.email);
+
+  if found then
+    return new;
+  end if;
+
   insert into public.profiles (id, email, name, register_number, role)
-  values (new.id, new.email, coalesce(new.raw_user_meta_data->>'name', coalesce(new.raw_user_meta_data->>'full_name', 'Student')), new.raw_user_meta_data->>'register_number', coalesce(new.raw_user_meta_data->>'role', 'student'));
+  values (
+    new.id,
+    new.email,
+    coalesce(new.raw_user_meta_data->>'name', coalesce(new.raw_user_meta_data->>'full_name', 'Student')),
+    new.raw_user_meta_data->>'register_number',
+    coalesce(new.raw_user_meta_data->>'role', 'student')
+  );
   return new;
 end;
 $$ language plpgsql security definer;

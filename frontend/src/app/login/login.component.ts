@@ -41,10 +41,12 @@ export class LoginComponent {
 
   async signInWithGoogle() {
     try {
-      sessionStorage.setItem(this.authService.loginPortalKey, 'student');
+      const portal = this.isAdminView ? 'admin' : 'student';
+      sessionStorage.setItem(this.authService.loginPortalKey, portal);
+      const redirectPage = this.isAdminView ? '/admin-login' : '/login';
       const { error } = await this.supabase.supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: `${window.location.origin}/login` }
+        options: { redirectTo: `${window.location.origin}${redirectPage}` }
       });
       if (error) throw error;
     } catch (e: any) { this.errorMessage = e.message; }
