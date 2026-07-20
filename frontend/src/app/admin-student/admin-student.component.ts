@@ -12,18 +12,15 @@ import { ProgressService } from '../services/progress.service';
 export class AdminStudentComponent implements OnInit {
   route = inject(ActivatedRoute); router = inject(Router); auth = inject(AuthService); progress = inject(ProgressService);
   id = ''; analytics: any = null; days: any[] = []; range: 'today'|'week'|'month'|'all' = 'all';
-  selected: any = null; sleepTarget = 7; loading = true; error = ''; updating = false; showReviewed = false;
+  selected: any = null; sleepTarget = 7; loading = true; error = ''; updating = false;
   proofUrls: Record<string, string|null> = { breakfast:null, lunch:null, dinner:null, walking:null, sleep:null };
-  get availableDays() {
-    return this.showReviewed ? this.days : this.days.filter(d => d.admin_status === 'pending');
-  }
   async ngOnInit() {
     this.id = this.route.snapshot.paramMap.get('id') || '';
     try {
       const { analytics, days } = await this.progress.studentDetail(this.id);
       this.analytics = analytics;
       this.days = days || [];
-      this.selected = this.availableDays[0] || this.days[0] || null;
+      this.selected = this.days[0] || null;
       await this.loadProofPreviews();
     } catch (e: any) { this.error = e.message; }
     finally { this.loading = false; }
@@ -36,14 +33,13 @@ export class AdminStudentComponent implements OnInit {
     return this.days.length ? this.days.reduce((a, d) => a + d.pct, 0) / this.days.length : 0;
   }
   get chartDays() {
-    const source = this.showReviewed ? this.days : this.availableDays;
-    if (this.range === 'all') return [...source].reverse();
+    if (this.range === 'all') return [...this.days].reverse();
     const today = this.progress.todayLocal();
-    if (this.range === 'today') return source.filter(d => d.date === today).reverse();
+    if (this.range === 'today') return this.days.filter(d => d.date === today).reverse();
     const from = new Date();
     from.setDate(from.getDate() - (this.range === 'week' ? 6 : 29));
     const fromStr = from.toISOString().slice(0, 10);
-    return source.filter(d => d.date >= fromStr).reverse();
+    return this.days.filter(d => d.date >= fromStr).reverse();
   }
   async onSelectionChange() { await this.loadProofPreviews(); }
   async loadProofPreviews() {
@@ -60,8 +56,8 @@ export class AdminStudentComponent implements OnInit {
     if (!path) return;
     try { window.open(await this.progress.signedUrl(path), '_blank'); } catch (e: any) { this.error = e.message; }
   }
-  async setStatus(status: 'approved'|'rejected') {
-    if (!this.selected || this.selected.admin_status === 'approved') return;
+  async setStatus(status: 'verified'|'recheck') {
+    if (!this.selected || this.selected.admin_status === 'verified') return;
     this.updating = true;
     try {
       await this.progress.setAdminStatus(this.selected.id, status);

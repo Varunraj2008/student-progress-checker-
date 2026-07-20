@@ -31,16 +31,6 @@ export class AuthService {
     return portal === 'student' || portal === 'admin' ? portal : null;
   }
 
-  private setLoginError(message: string) {
-    sessionStorage.setItem('wellness-login-error', message);
-  }
-
-  getLoginError(): string | null {
-    const error = sessionStorage.getItem('wellness-login-error');
-    if (error) sessionStorage.removeItem('wellness-login-error');
-    return error;
-  }
-
   private clearLoginPortal() {
     sessionStorage.removeItem(this.loginPortalKey);
   }
@@ -69,7 +59,6 @@ export class AuthService {
             } else if (portal === 'student' && this.currentRole() === 'student') {
               this.router.navigate(['/student']);
             } else {
-              this.setLoginError('Invalid credentials for this portal.');
               await this.signOut();
               this.router.navigate([portal === 'admin' ? '/admin-login' : '/login']);
             }
@@ -104,46 +93,60 @@ export class AuthService {
     return 'student';
   }
 
-  async loadProfile(user: any) {
+  private async syncProfileByEmail(user: any) {
     const email = (user.email || '').trim().toLowerCase();
-    const { data: authProfile, error: authError } = await this.supabase.supabase.from('profiles').select('*').eq('auth_id', user.id).maybeSingle();
-    if (authError) throw authError;
-    if (authProfile) {
-      const profile = { ...authProfile, id: authProfile.auth_id };
-      this.currentUser.set(profile);
-      this.currentRole.set(authProfile.role);
-      return;
-    }
+    if (!email) return null;
 
     const { data: emailProfile, error: emailError } = await this.supabase.supabase.from('profiles').select('*').ilike('email', email).maybeSingle();
     if (emailError) throw emailError;
+    if (!emailProfile) return null;
+
+    const profilePayload = {
+      id: user.id,
+      email: emailProfile.email,
+      name: user.user_metadata?.full_name || user.user_metadata?.name || emailProfile.email,
+      role: emailProfile.role,
+      password: emailProfile.password
+    };
+
+    const { data: syncedProfile, error: syncError } = await this.supabase.supabase.from('profiles')
+      .upsert(profilePayload, { onConflict: 'email' }).select().maybeSingle();
+    if (syncError) {
+      return emailProfile;
+    }
+    return syncedProfile || emailProfile;
+  }
+
+  async loadProfile(user: any) {
+    const { data, error } = await this.supabase.supabase.from('profiles').select('*').eq('id', user.id).maybeSingle();
+    if (error) throw error;
+    if (data) {
+      this.currentUser.set(data);
+      this.currentRole.set(data.role);
+      return;
+    }
+
+    const emailProfile = await this.syncProfileByEmail(user);
     if (emailProfile) {
-      const { data: updated, error: updateError } = await this.supabase.supabase.from('profiles')
-        .update({ auth_id: user.id })
-        .ilike('email', email)
-        .select()
-        .maybeSingle();
-      if (updateError) throw updateError;
-      const profile = { ...(updated || emailProfile), id: user.id, auth_id: user.id };
-      this.currentUser.set(profile);
-      this.currentRole.set(profile.role);
+      this.currentUser.set({ ...emailProfile, id: user.id });
+      this.currentRole.set(emailProfile.role);
       return;
     }
 
     const role = this.resolveRoleFromUser(user);
     const profilePayload = {
-      auth_id: user.id,
-      email,
-      name: user.user_metadata?.full_name || user.user_metadata?.name || email,
+      id: user.id,
+      email: user.email,
+      name: user.user_metadata?.full_name || user.user_metadata?.name || user.email,
       role
     };
-    const { data: newProfile, error: insertError } = await this.supabase.supabase.from('profiles').insert(profilePayload).select().maybeSingle();
+    const { data: newProfile, error: insertError } = await this.supabase.supabase.from('profiles').upsert(profilePayload, { onConflict: 'id' }).select().maybeSingle();
     if (insertError) {
-      this.currentUser.set({ auth_id: user.id, email, name: email, role, id: user.id });
+      this.currentUser.set({ id: user.id, email: user.email, name: user.email, role });
       this.currentRole.set(role);
       return;
     }
-    this.currentUser.set({ ...(newProfile || profilePayload), id: newProfile?.auth_id || user.id, auth_id: newProfile?.auth_id || user.id });
+    this.currentUser.set(newProfile || { ...profilePayload });
     this.currentRole.set(newProfile?.role || role);
   }
 
@@ -155,11 +158,10 @@ export class AuthService {
         .select('*').ilike('email', trimmedEmail).eq('password', password).maybeSingle();
       if (profileError) throw profileError;
       if (!profile) throw error || new Error('Invalid credentials');
-      const userWithId = { ...profile, id: profile.auth_id };
-      this.currentUser.set(userWithId);
+      this.currentUser.set(profile);
       this.currentRole.set(profile.role);
-      this.persistLocalSession(userWithId, profile.role);
-      return { user: userWithId } as any;
+      this.persistLocalSession(profile, profile.role);
+      return { user: profile } as any;
     }
     await this.loadProfile(data.user);
     this.persistLocalSession(this.currentUser(), this.currentRole() || 'student');

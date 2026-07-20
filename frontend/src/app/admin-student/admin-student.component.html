@@ -43,9 +43,8 @@
     </div>
     <div class="card panel">
       <h3>Proof review</h3>
-      <label class="switch"><input type="checkbox" [(ngModel)]="showReviewed" /><span>Show reviewed entries</span></label>
       <select class="day-select" [(ngModel)]="selected" (ngModelChange)="onSelectionChange()">
-        <option *ngFor="let d of availableDays" [ngValue]="d">{{ d.date }} · {{ d.pct }}% · {{ d.admin_status }}</option>
+        <option *ngFor="let d of days" [ngValue]="d">{{ d.date }} · {{ d.pct }}% · {{ d.admin_status }}</option>
       </select>
       <div *ngIf="selected">
         <ul class="facts">
@@ -55,11 +54,11 @@
           <li>Distance: {{ selected.distance_km }} km <button *ngIf="selected.walking_proof_path" class="link" (click)="viewProof(selected.walking_proof_path)">proof</button></li>
           <li>Sleep: {{ selected.sleep_hours }} h <button *ngIf="selected.sleep_proof_path" class="link" (click)="viewProof(selected.sleep_proof_path)">proof</button></li>
         </ul>
-        <div class="actions" *ngIf="selected.admin_status !== 'approved'">
-          <button class="btn-ok" [disabled]="updating" (click)="setStatus('approved')">Approve</button>
-          <button class="btn-warn" [disabled]="updating" (click)="setStatus('rejected')">Reject</button>
+        <div class="actions" *ngIf="selected.admin_status !== 'verified'">
+          <button class="btn-ok" [disabled]="updating" (click)="setStatus('verified')">Approve</button>
+          <button class="btn-warn" [disabled]="updating" (click)="setStatus('recheck')">Recheck</button>
         </div>
-        <p class="approved" *ngIf="selected.admin_status === 'approved'">Approved</p>
+        <p class="approved" *ngIf="selected.admin_status === 'verified'">Approved</p>
       </div>
       <p *ngIf="!selected" class="empty">No daily records.</p>
     </div>
