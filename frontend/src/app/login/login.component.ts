@@ -37,7 +37,7 @@ export class LoginComponent {
     password: ['', [Validators.required, Validators.minLength(6)]],
   });
   loading = false;
-  errorMessage = '';
+  errorMessage = this.authService.getLoginError() || '';
 
   async signInWithGoogle() {
     try {

@@ -116,9 +116,9 @@ export class StudentDashboardComponent implements OnInit {
 
   adminRequested = false;
   async requestAdmin() {
-    const uid = this.auth.currentUser()?.id;
+    const uid = this.auth.currentUser()?.auth_id || this.auth.currentUser()?.id;
     if (!uid) return;
-    const { error } = await this.supabase.supabase.from('profiles').update({ wants_admin_access: true }).eq('id', uid);
+    const { error } = await this.supabase.supabase.from('profiles').update({ wants_admin_access: true }).eq('auth_id', uid);
     if (error) { this.error = error.message; return; }
     this.adminRequested = true;
     this.success = 'Admin access requested. Staff must approve in SQL / dashboard.';

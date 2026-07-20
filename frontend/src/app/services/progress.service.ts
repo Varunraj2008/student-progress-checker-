@@ -85,7 +85,7 @@ export class ProgressService {
   async adminStats() {
     const today = this.todayLocal(), sleep = 7;
     const [{ data: students }, { data: todayRows }] = await Promise.all([
-      this.sb.from('profiles').select('id').eq('role', 'student'),
+      this.sb.from('profiles').select('auth_id').eq('role', 'student'),
       this.sb.from('daily_progress').select('*').eq('date', today)
     ]);
     const total = students?.length || 0, submitted = todayRows?.length || 0;
@@ -105,18 +105,18 @@ export class ProgressService {
     const monthFrom = new Date(); monthFrom.setDate(monthFrom.getDate() - 29);
     const w0 = weekFrom.toISOString().slice(0,10), m0 = monthFrom.toISOString().slice(0,10);
     const [{ data: students, error: e1 }, { data: rows, error: e2 }] = await Promise.all([
-      this.sb.from('profiles').select('id,name,register_number,email').eq('role', 'student'),
+      this.sb.from('profiles').select('auth_id,name,register_number,email').eq('role', 'student'),
       this.sb.from('daily_progress').select('*').gte('date', m0)
     ]);
     if (e1) throw e1; if (e2) throw e2;
     const avg = (arr: any[]) => arr.length ? arr.reduce((a, r) => a + this.calcLocal(r, sleep), 0) / arr.length : 0;
     const rate = (arr: any[], pred: (r: any) => boolean) => arr.length ? (arr.filter(pred).length / arr.length) * 100 : 0;
     return (students || []).map(p => {
-      const mine = (rows || []).filter(r => r.student_id === p.id);
+      const mine = (rows || []).filter(r => r.student_id === p.auth_id);
       const todayRow = mine.find(r => r.date === today);
       const week = mine.filter(r => r.date >= w0), month = mine;
       return {
-        student_id: p.id, student_name: p.name, register_number: p.register_number, email: p.email,
+        student_id: p.auth_id, student_name: p.name, register_number: p.register_number, email: p.email,
         submitted_today: !!todayRow,
         today_progress: todayRow ? this.calcLocal(todayRow, sleep) : 0, week_progress: avg(week), month_progress: avg(month),
         meal_completion_rate: rate(month, r => r.breakfast_completed && r.lunch_completed && r.dinner_completed),
@@ -132,7 +132,7 @@ export class ProgressService {
     const monthFrom = new Date(); monthFrom.setDate(monthFrom.getDate() - 29);
     const m0 = monthFrom.toISOString().slice(0,10);
     const [{ data: student }, { data: rows, error }] = await Promise.all([
-      this.sb.from('profiles').select('id,name,register_number,email').eq('id', studentId).single(),
+      this.sb.from('profiles').select('auth_id,name,register_number,email').eq('auth_id', studentId).single(),
       this.sb.from('daily_progress').select('*').eq('student_id', studentId).gte('date', m0).order('date', { ascending: false })
     ]);
     if (error) throw error;
@@ -145,7 +145,7 @@ export class ProgressService {
     const avg = (arr: any[]) => arr.length ? arr.reduce((a, r) => a + this.calcLocal(r, sleep), 0) / arr.length : 0;
     const rate = (arr: any[], pred: (r: any) => boolean) => arr.length ? (arr.filter(pred).length / arr.length) * 100 : 0;
     const analytics = {
-      student_id: p.id, student_name: p.name, register_number: p.register_number, email: p.email,
+      student_id: p.auth_id, student_name: p.name, register_number: p.register_number, email: p.email,
       submitted_today: !!todayRow,
       today_progress: todayRow ? this.calcLocal(todayRow, sleep) : 0, week_progress: avg(week), month_progress: avg(month),
       meal_completion_rate: rate(month, r => r.breakfast_completed && r.lunch_completed && r.dinner_completed),
@@ -157,7 +157,7 @@ export class ProgressService {
     return { analytics, days };
   }
 
-  async setAdminStatus(progressId: string, status: 'verified'|'recheck') {
+  async setAdminStatus(progressId: string, status: 'approved'|'rejected') {
     const { error } = await this.sb.from('daily_progress').update({ admin_status: status }).eq('id', progressId);
     if (error) throw error;
   }

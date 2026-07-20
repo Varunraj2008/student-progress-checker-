@@ -17,6 +17,7 @@ export class AdminLoginComponent implements OnInit {
   loading = false; errorMessage = '';
 
   async ngOnInit() {
+    this.errorMessage = this.auth.getLoginError() || '';
     // After Google redirect: enforce admin-only
     const { data: { session } } = await this.supabase.supabase.auth.getSession();
     if (session?.user) {
@@ -24,7 +25,7 @@ export class AdminLoginComponent implements OnInit {
       if (this.auth.currentRole() === 'admin') this.router.navigate(['/admin']);
       else if (sessionStorage.getItem(this.auth.loginPortalKey) === 'admin') {
         await this.auth.signOut();
-        this.errorMessage = 'Not an admin account. Ask staff to set wants_admin_access / role.';
+        this.errorMessage = 'Invalid credentials for this portal.';
         sessionStorage.removeItem(this.auth.loginPortalKey);
       }
     }
